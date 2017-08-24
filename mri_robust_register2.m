@@ -1,4 +1,4 @@
-function mri_robust_register(inVol,outVol,outDir,refvol,vsmap)
+function mri_robust_register(inVol,outVol,outDir,refvol,vsmap,exfdw)
 
 % Motion corrects a 4D volume using Freesurfer's 'mri_robust_register'
 %
@@ -15,16 +15,16 @@ function mri_robust_register(inVol,outVol,outDir,refvol,vsmap)
 %
 %   Written by Andrew S Bock May 2016
 
+	%%OLD VERSION DO NOT USE. USE mri_robust_register.m!
+
 %% Set output for .lta files
 outMC = fullfile(outDir,'mc');
-if exist(outMC,'dir')
-    warning('MC directory already exists. Removing old files.');
-    rmdir(outMC,'s');
+if ~exist(outMC,'dir')
+    mkdir(outMC);
 end
-mkdir(outMC);
 if ~exist('vsmap','var') 
     unwarp=0;
-elseif exist(vsmap, 'file')
+elseif exist(vsmap, 'file') && exist('exfdw','var') && exist(exfdw, 'file')
     unwarp=1;
 else
     warning('\nWarning: Voxel Shift Map not found. Not performing unwarping.\n');
@@ -43,14 +43,14 @@ for i = 1:length(inVols)
         ' --dst ' dstFile ' --lta ' fullfile(outMC,sprintf('%04d.lta',i)) ...
         ' --vox2vox --satit'];
     if ~unwarp
-        register_string = [register_string ' --mapmov ' outFile];
+        register_string = [reigster_string ' --mapmov ' outFile];
     end
     [~,~] = system(register_string);
     
     if unwarp
-        system(['mri_vol2vol --mov ' inFile ' --targ ' dstFile ' --o ' outFile ...
+        system(['mri_vol2vol --mov ' inFile ' --targ ' exfdw ' --o ' outFile ...
             ' --lta ' fullfile(outMC,sprintf('%04d.lta',i)) ' --vsm ' vsmap ...
-            ' --cubic --no-save-reg']);
+            ' --cubic']);
     end
     progBar(i);
 end
@@ -77,4 +77,4 @@ for i = 1:length(ltaFiles);
     [x(i),y(i),z(i),pitch(i),yaw(i),roll(i)] = convertlta2tranrot(inFile);
 end
 motion_params = [pitch',yaw',roll',x',y',z'];
-dlmwrite(fullfile(outDir,'motion_params6.txt'),motion_params,'delimiter',' ','precision','%10.5f');
+dlmwrite(fullfile(outDir,'motion_params.txt'),motion_params,'delimiter',' ','precision','%10.5f');

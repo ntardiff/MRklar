@@ -1,4 +1,4 @@
-function mri_robust_register(inVol,outVol,outDir,refvol,vsmap)
+function mri_robust_register(inVol,outVol,outDir,refvol)
 
 % Motion corrects a 4D volume using Freesurfer's 'mri_robust_register'
 %
@@ -17,41 +17,21 @@ function mri_robust_register(inVol,outVol,outDir,refvol,vsmap)
 
 %% Set output for .lta files
 outMC = fullfile(outDir,'mc');
-if exist(outMC,'dir')
-    warning('MC directory already exists. Removing old files.');
-    rmdir(outMC,'s');
-end
-mkdir(outMC);
-if ~exist('vsmap','var') 
-    unwarp=0;
-elseif exist(vsmap, 'file')
-    unwarp=1;
-else
-    warning('\nWarning: Voxel Shift Map not found. Not performing unwarping.\n');
-    unwarp=0;
+if ~exist(outMC,'dir')
+    mkdir(outMC);
 end
 %% Split input 4D volume into 3D volumes
 system(['mri_convert ' inVol ' ' fullfile(outMC,'split_f.nii.gz') ' --split']);
 %% Register volumes
 inVols = listdir(fullfile(outMC,'split_f0*'),'files');
 progBar = ProgressBar(length(inVols),'mri_robust_registering...');
-dstFile = fullfile(outMC,inVols{refvol}); % register to first volume
 for i = 1:length(inVols)
     inFile = fullfile(outMC,inVols{i});
+    dstFile = fullfile(outMC,inVols{refvol}); % register to first volume
     outFile = fullfile(outMC,sprintf('tmp_%04d.nii.gz',i));
-    register_string = ['mri_robust_register --mov ' inFile ...
+    [~,~] = system(['mri_robust_register --mov ' inFile ...
         ' --dst ' dstFile ' --lta ' fullfile(outMC,sprintf('%04d.lta',i)) ...
-        ' --vox2vox --satit'];
-    if ~unwarp
-        register_string = [register_string ' --mapmov ' outFile];
-    end
-    [~,~] = system(register_string);
-    
-    if unwarp
-        system(['mri_vol2vol --mov ' inFile ' --targ ' dstFile ' --o ' outFile ...
-            ' --lta ' fullfile(outMC,sprintf('%04d.lta',i)) ' --vsm ' vsmap ...
-            ' --cubic --no-save-reg']);
-    end
+        ' --vox2vox --satit --mapmov ' outFile]);
     progBar(i);
 end
 system(['rm ' fullfile(outMC,'split_f0*')]); % remove split volumes
@@ -77,4 +57,4 @@ for i = 1:length(ltaFiles);
     [x(i),y(i),z(i),pitch(i),yaw(i),roll(i)] = convertlta2tranrot(inFile);
 end
 motion_params = [pitch',yaw',roll',x',y',z'];
-dlmwrite(fullfile(outDir,'motion_params6.txt'),motion_params,'delimiter',' ','precision','%10.5f');
+dlmwrite(fullfile(outDir,'motion_params.txt'),motion_params,'delimiter',' ','precision','%10.5f');
