@@ -22,7 +22,7 @@ if ~exist('dicom_dir','var')
     dicom_dir = fullfile(session_dir,'DICOMS');
 end
 %% Add to log
-SaveLogInfo(session_dir, mfilename,session_dir,subject_name)
+%SaveLogInfo(session_dir, mfilename,session_dir,subject_name)
 
 %% find dicom directories
 series = listdir(dicom_dir,'dirs');

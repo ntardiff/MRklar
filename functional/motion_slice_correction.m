@@ -1,82 +1,93 @@
-function motion_slice_correction(params,runNum)
+function motion_slice_correction(session_dir,despike,sliceTiming,unwarp,runNums,refvol)
 
-% Remove large spikes, corrects slice timings, and corrects head motion
+%   Removes large spikes (>7*RMSE), runs motion and slice timing
+%   correction.
 %
 %   Usage:
-%       motion_slice_correction(params,runNum)
-%
-%   Required:
-%       params.sessionDir       = '/path/to/session/directory'
+%   motion_slice_correction(session_dir,despike,sliceTiming,refvol)
 %
 %   Defaults:
-%       params.despike          = 1; % params.despike data
-%       params.slicetiming      = 1; % do slice timing correction
-%       params.refvol           = 1; % reference volume = 1st TR
-%
-%   Optional:
-%       params.regFirst         = 1; % register to the first run
-%       params.topup            = 1; % use FSL's topup for distortion correction
+%     despike = 1; % default will despike data
+%     SliceTiming = 1; do slice timing correction (custom script)
 %
 %   Written by Andrew S Bock June 2016
 
 %% Set default parameters
-if ~isfield(params,'despike')
-    params.despike              = 1; % params.despike data
+if ~exist('despike','var')
+    despike = 1; % despike data
 end
-if ~isfield(params,'slicetiming')
-    params.slicetiming          = 1; % do slice timing correction
+if ~exist('sliceTiming','var')
+    sliceTiming = 1; % do slice timing correction
 end
-if ~isfield(params,'refvol')
-    params.refvol               = 1; % reference volume = 1st TR
+if ~exist('unwarp','var')
+    unwarp = 0; % do B0 unwarping with motion correction
 end
 % Find bold run directories
-d = find_bold(params.sessionDir);
+d = find_bold(session_dir);
+if ~exist('runNums','var')
+    runNums = 1:length(d);
+end
+if ~exist('refvol','var')
+    refvol = 1; % reference volume = 1st TR
+end
 %% Remove spikes
-if params.despike
-    remove_spikes(fullfile(params.sessionDir,d{runNum},'raw_f.nii.gz'),...
-        fullfile(params.sessionDir,d{runNum},'despike_f.nii.gz'),fullfile(params.sessionDir,d{runNum},'raw_f_spikes'));
+if despike
+    for rr = runNums
+        remove_spikes(fullfile(session_dir,d{rr},'raw_f.nii.gz'),...
+            fullfile(session_dir,d{rr},'despike_f.nii.gz'),fullfile(session_dir,d{rr},'raw_f_spikes'));
+    end
 end
 %% Slice timing correction
-if params.slicetiming
-    if params.despike
-        inFile                  = fullfile(params.sessionDir,d{runNum},'despike_f.nii.gz');
-    else
-        inFile                  = fullfile(params.sessionDir,d{runNum},'raw_f.nii.gz');
+if sliceTiming
+    for rr = runNums
+        if despike
+            inFile = fullfile(session_dir,d{rr},'despike_f.nii.gz');
+        else
+            inFile = fullfile(session_dir,d{rr},'raw_f.nii.gz');
+        end
+        outFile = fullfile(session_dir,d{rr},'f.nii.gz');
+        timingFile = fullfile(session_dir,d{rr},'slicetiming');
+        slice_timing_correction(inFile,outFile,timingFile);
     end
-    outFile                     = fullfile(params.sessionDir,d{runNum},'f.nii.gz');
-    timingFile                  = fullfile(params.sessionDir,d{runNum},'slicetiming');
-    slice_timing_correction(inFile,outFile,timingFile);
 end
 %% Run motion correction
-if params.slicetiming
-    mcParams.mcFile             = fullfile(params.sessionDir,d{runNum},'f.nii.gz');
-    mcParams.regFile            = fullfile(params.sessionDir,d{1},'f.nii.gz');
-elseif params.despike
-    mcParams.mcFile             = fullfile(params.sessionDir,d{runNum},'despike_f.nii.gz');
-    mcParams.regFile            = fullfile(params.sessionDir,d{1},'despike_f.nii.gz');
+if sliceTiming
+    infunc = 'f';
+elseif despike
+    infunc = 'despike_f';
 else
-    mcParams.mcFile             = fullfile(params.sessionDir,d{runNum},'raw_f.nii.gz');
-    mcParams.regFile            = fullfile(params.sessionDir,d{1},'raw_f.nii.gz');
+    infunc = 'raw_f';
 end
-mcParams.outFile                = fullfile(params.sessionDir,d{runNum},'rf.nii.gz');
-mcParams.outDir                 = fullfile(params.sessionDir,d{runNum});
-if isfield(params,'regFirst') && params.regFirst
-    % Copy the first volume of the first run to d{runNum}
-    mcParams.dstFile            = fullfile(params.sessionDir,d{runNum},'dstFile.nii.gz');
-    system(['fslroi ' mcParams.regFile ' ' mcParams.dstFile ' ' num2str(params.refvol-1) ' 1']);
+if strcmp(refvol,'mid')
+    usemid = 1;
+else
+    usemid = 0;
 end
-% output for registration file
-mcParams.dstMat             = fullfile(params.sessionDir,d{runNum},'dstMat.mat');
-if isfield(params,'topup') && params.topup
-    % motion correction file
-    if ~isempty(strfind(d{runNum},'_AP'))
-        mcParams.phaseFile      = fullfile(params.sessionDir,'SpinEchoFieldMap','SpinEchoFieldMap_AP_01.nii.gz');
-        mcParams.warpFile       = fullfile(params.sessionDir,'SpinEchoFieldMap','PhaseOneWarp.nii.gz');
-    elseif ~isempty(strfind(d{runNum},'_PA'))
-        mcParams.phaseFile      = fullfile(params.sessionDir,'SpinEchoFieldMap','SpinEchoFieldMap_PA_01.nii.gz');
-        mcParams.warpFile       = fullfile(params.sessionDir,'SpinEchoFieldMap','PhaseTwoWarp.nii.gz');
-    else
-        error('No warp direction found in bold directory name');
+for rr = runNums
+    inFile = fullfile(session_dir,d{rr},[infunc '.nii.gz']);
+    outFile = fullfile(session_dir,d{rr},'rf.nii.gz');
+    %mcflirt(inFile,outFile,refvol);
+    outDir = fullfile(session_dir,d{rr});
+    
+    %if specified align to middle volume. 
+    if usemid
+        [~,midvol] = system(['mri_info --mid-frame ' inFile])
+        %need to add plust one b/c of differences in numbering between
+        %matlab, fslroi, etc; fslroi begins at 0.
+        refvol = str2double(midvol) + 1  
     end
+    
+    if unwarp
+        %this is kind of annoying but necessary b/c of how I patterened
+        %B0unwarp on how most other MRklar functions work where they take
+        %just the file name and no directory/extension. Could change the
+        %inFile code above but lazy.
+        B0unwarp(session_dir,rr,infunc);
+        
+        vsmap = fullfile(session_dir,d{rr},'vsmap.nii.gz');
+        mri_robust_register(inFile,outFile,outDir,refvol,vsmap)
+    else
+        mri_robust_register(inFile,outFile,outDir,refvol)
+    end
+           
 end
-mcflirt(params,mcParams);

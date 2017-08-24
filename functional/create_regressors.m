@@ -57,7 +57,7 @@ if ~exist('anat','var')
     anat = 1;
 end
 if ~exist('parfile','var')
-    parfile = 'motion_params.txt';
+    parfile = 'motion_params6.txt';
 end
 if ~exist('dtmotion','var')
     dtmotion = 1; % detrend motion params
