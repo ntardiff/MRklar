@@ -9,8 +9,10 @@ function motion_slice_correction(session_dir,despike,sliceTiming,unwarp,runNums,
 %   Defaults:
 %     despike = 1; % default will despike data
 %     SliceTiming = 1; do slice timing correction (custom script)
+%     refvol: if refvol = 'mid', uses middle volume for reference
 %
 %   Written by Andrew S Bock June 2016
+%   Modified for B0 unwarping by Nathan Tardiff September 2016
 
 %% Set default parameters
 if ~exist('despike','var')

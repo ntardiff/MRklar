@@ -1,5 +1,5 @@
 function segment_anat_aparc_aseg(session_dir,subject_name,SUBJECTS_DIR)
-% Segments the freesurfer anatomical aseg.mgz volume into several ROIs in 
+% Segments the freesurfer anatomical aparc+aseg.mgz volume into several ROIs in 
 %   the session_dir:
 %
 %   brain.nii.gz
@@ -13,9 +13,14 @@ function segment_anat_aparc_aseg(session_dir,subject_name,SUBJECTS_DIR)
 %   aseg.brainstem.nii.gz
 %   aseg.unknown.nii.gz
 %
-%   Usage: segment_anat(session_dir,subject_name,SUBJECTS_DIR)
+%   Usage: segment_anat_aparc_aseg(session_dir,subject_name,SUBJECTS_DIR)
 %
-%   Written by Andrew S Bock Apr 2015
+%   NOTE: aparc+aseg has the advantage of being based on final surfs, and thus
+%   should provide a more accurate parcellation of wm/gm than aseg.mgz, 
+%   which is from the initial parcellation. 
+%
+%   Based on segment_aparc, Written by Andrew S Bock Apr 2015
+%   Modified to use aparc+aseg by Nathan Tardiff Sept 2015
 
 %% Set default parameters
 if ~exist('session_dir','var')

@@ -1,9 +1,11 @@
 function mri_robust_register(inVol,outVol,outDir,refvol,vsmap)
 
 % Motion corrects a 4D volume using Freesurfer's 'mri_robust_register'
+% If supplied w/ voxel-shift map, combines B0 unwarping and motion
+% correction.
 %
 %   Usage:
-%   mri_robust_register(inVol,outVol,outDir,refvol)
+%   mri_robust_register(inVol,outVol,outDir,refvol,vsmap)
 %
 %   Based on:
 %   Highly Accurate Inverse Consistent Registration: A Robust Approach
@@ -12,8 +14,11 @@ function mri_robust_register(inVol,outVol,outDir,refvol,vsmap)
 %
 %   Note:
 %   refvol = 1 is the first volume
+%   vsmap: a voxel-shift map created by epidewarp.fsl (see B0unwarp.m) to
+%   perform B0 unwarping.
 %
 %   Written by Andrew S Bock May 2016
+%   B0 unwarping added by Nathan Tardiff Sept 2016
 
 %% Set output for .lta files
 outMC = fullfile(outDir,'mc');

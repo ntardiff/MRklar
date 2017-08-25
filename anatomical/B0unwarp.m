@@ -1,23 +1,23 @@
 function B0unwarp(session_dir, runNum, func, epidewarp_path, tmp_dir)
-%% I just realized B0calc basically calculates everything I need and can just pull--but check
-%   Calculate B0 map from double echo Siemens fieldmap sequence. Images are
-%   phase unwrapped and in units of Hertz.
+
+%   Creates a voxel-shift map from a double-echo B0 map for use in B0
+%   unwarping.
 %
-%   Usage;
-%   B0calc(outDir,phaseDicomDir,subject)
+%   Usage:
+%   B0unwarp(session_dir, runNum, func, epidewarp_path, tmp_dir)
 %
-%   defaults:
-%   outDir = no default, must specify
-%   phaseDicomDir = no default, must specify
-%   subject = no default, not necessary except if brain extraction using
-%   bet is poor, in which case will use bbregister and brain.mgz
+%   Defaults:
+%     func = 'raw_f'; % will create the vsm for unwarping raw
+%     unpreprocessed BOLD run.
+%     epidewarp_path = epidewarp.fsl in cwd or otherwise on path % full path (including file name) for epidewarp.fsl
+%     tmp_dir = environment variable $TMPDIR % location to store temporary
+%     files. If on UPenn cluster, best to use $TMPDIR.
 %
-%   Requires FSL
-%   modified from scripts provided by Mark Elliot
-%
-%   Written by Andrew S Bock Feb 2014
 %   Requires epidewarp.fsl to be available in path. Newest version can be
 %   found at: ftp://surfer.nmr.mgh.harvard.edu/transfer/outgoing/flat/greve/epidewarp.fsl
+%
+%   Written by Nathan Tardiff Sept 2016
+
 
 fprintf('\nDEWARPING EPI IMAGES\n');
 
@@ -54,37 +54,14 @@ for rr = runNum
     echo_spacing = num2str(dlmread(fullfile(session_dir,d{rr},'EchoSpacing')));
     epi_te = num2str(dlmread(fullfile(session_dir,d{rr},'EPI_TE')));
     
-    %{
-    if exist(fullfile(session_dir,d{rr},['nu',func,'.nii.gz']),'file')
-        fprintf('\nDewarping was already run. Rerunning on undewarped EPIs.\n');
-        prefix = 'nu';
-    else
-        prefix = '';
-    end
-
-    
-    %apply correction
-    status = system([epidewarp_path ' --mag ' mag1file ' --dph ' phasefile ...
-        ' --epi ' fullfile(session_dir,d{rr},[prefix,func,'.nii.gz']) ' --tediff ' delta_te ...
-        ' --esp ' echo_spacing ' --vsm ' fullfile(session_dir,d{rr},'vsmap.nii.gz') ...
-        ' --exfdw ' fullfile(session_dir,d{rr},'exfu.nii.gz') ' --epidw ' fullfile(session_dir,d{rr},['u',func,'.nii.gz']) ...
-        ' --tmpdir ' tmp_dir ' --cleanup'])
-    %}
+    %create voxel-shift map
     status = system([epidewarp_path ' --mag ' mag1file ' --dph ' phasefile ...
         ' --epi ' fullfile(session_dir,d{rr},[func,'.nii.gz']) ' --tediff ' delta_te ...
         ' --esp ' echo_spacing ' --vsm ' fullfile(session_dir,d{rr},'vsmap.nii.gz') ...
         ' --exfdw ' fullfile(session_dir,d{rr},'exfu.nii.gz') ...
         ' --tmpdir ' tmp_dir ' --cleanup'])
-    %NOT DOING THIS ANYMORE: rename EPI files -- append 'nu' for not unwarped to original files and then
-    %rename 'u' (unwarped) files to original name [wanted to use 'dw' for
-    %'dewarped' but conflicts w/ naming convention for later steps
+
     if status == 0
-        %{
-        if isempty(prefix)
-            movefile(fullfile(session_dir,d{rr},[func,'.nii.gz']), fullfile(session_dir,d{rr},['nu',func,'.nii.gz']))
-        end
-        movefile(fullfile(session_dir,d{rr},['u',func,'.nii.gz']), fullfile(session_dir,d{rr},[func,'.nii.gz']))
-        %}
         fprintf('\ndone.\n')
     else
         warning('\nWARNING: epidewarp.fsl did not exit cleanly.\n');

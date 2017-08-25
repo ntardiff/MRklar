@@ -80,7 +80,7 @@ end
 d = find_bold(session_dir);
 
 %% Create regressors
-for rr = runNum;
+for rr = runNum
     %% Create Noise Regressors
     disp(['Creating Nuisance Regressors: Run ' num2str(rr)]);
     %% Create physiological noise regressors
@@ -128,7 +128,7 @@ for rr = runNum;
         outDir = fullfile(session_dir,d{rr});
         % Following Friston et al. (1996) (Friston 24-parameter model);
         % Load 6 motion parameters from feat
-        tmpm = load(fullfile(session_dir,d{rr},'mc',parfile));
+        tmpm = load(fullfile(session_dir,d{rr},parfile));
         % Convert radians to mm (assume 50mm radius) (see Power et al.
         % (2012) NeuroImage, 59, 2142 - 2154)
         tmpm(:,1:3) = 50*tmpm(:,1:3);
