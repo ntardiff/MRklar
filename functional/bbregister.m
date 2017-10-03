@@ -1,4 +1,4 @@
-function bbregister(subject_name,filefor_reg,bbreg_out_file,acq_type,mincost_thresh,interactive)
+function bbregister(subject_name,filefor_reg,bbreg_out_file,acq_type,refvol,mincost_thresh,interactive)
 
 % Performs within-subject, cross-modal registration to a subject's
 %   corresponding Freesurfer anatomical file
@@ -41,8 +41,12 @@ end
 
 %% Run bbregister
 disp(['Performing registration of ' filefor_reg ' using bbregister...']);
+framearg = '';
+if exist('refvol','var') && ~isempty(refvol)
+	framearg = [' --frame ' num2str(refvol)];
+end
 system(['bbregister --s ' subject_name ' --mov ' filefor_reg ...
-    ' --reg ' bbreg_out_file ' --init-fsl --' acq_type]);
+    ' --reg ' bbreg_out_file ' --init-fsl --' acq_type, framearg]);
 %% Check the registration
 mincost = load([bbreg_out_file '.mincost']);
 mincost = mincost(1);

@@ -62,6 +62,8 @@ else
 end
 if strcmp(refvol,'mid')
     usemid = 1;
+elseif strcmp(refvol,'midp1')
+    usemid = 2;
 else
     usemid = 0;
 end
@@ -73,10 +75,16 @@ for rr = runNums
     
     %if specified align to middle volume. 
     if usemid
-        [~,midvol] = system(['mri_info --mid-frame ' inFile])
-        %need to add plust one b/c of differences in numbering between
-        %matlab, fslroi, etc; fslroi begins at 0.
-        refvol = str2double(midvol) + 1  
+        [~,midvol] = system(['mri_info --mid-frame ' inFile]);
+
+        refvol = str2double(midvol);
+        
+        %this option is for using epidewarp.fsl, which incorrectly
+        %chooses midvol+1 as reference volume b/c of numbering differences 
+        %between fslroi (starts at 0) and mri_info (starts at 1). 
+        if usemid==2
+            refvol = refvol + 1;
+        end
     end
     
     if unwarp
