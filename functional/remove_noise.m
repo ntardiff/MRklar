@@ -1,4 +1,4 @@
-function remove_noise(session_dir,runNum,func,remove_task,anat,motion,physio)
+function remove_noise(session_dir,runNum,func,remove_task,anat,motion,physio,task)
 % Removes physiological and other non-neuronal noise.
 %
 %   Usage:
@@ -22,8 +22,11 @@ end
 if ~exist('physio','var')
     physio = 1;  % if '0', won't remove motion (and pulse) signals
 end
+if ~exist('task','var')
+    task = 0; % if '0', won't remove task signals (NOTE: remove_task above just removes task from motion regressors)
+end
 %% In case no noise removal to be done, just return
-if ~remove_task && ~anat && ~motion && ~physio
+if ~remove_task && ~anat && ~motion && ~physio && ~task
     return
 end
 %% Find bold run directories
@@ -62,12 +65,8 @@ for rr = runNum
         anat_noise = load(fullfile(session_dir,d{rr},'anat_params.txt'));
     end
     %% Load up other nuisance regressors
-    if ~motion
-        motion_noise = [];
-    else
-        motion_noise = load(fullfile(session_dir,d{rr},'motion_params.txt'));
-        if remove_task
-            % Get the task files
+    if task || remove_task
+                    % Get the task files
             %   Some files have no leading zeros, so we have to clean up a bit.
             allDirs = listdir(fullfile(session_dir,'Stimuli'),'dirs');
             dirNums = zeros(1,length(allDirs));
@@ -91,6 +90,17 @@ for rr = runNum
             keyword = '_valid'; % only use 'valid' trials
             [outTC] = convert_task2tc(inDir,TR,lengthTC,keyword);
             % regress out task from motion
+    end
+    if ~task
+        task_noise = [];
+    else
+        task_noise = outTC;
+    end
+    if ~motion
+        motion_noise = [];
+    else
+        motion_noise = load(fullfile(session_dir,d{rr},'motion_params.txt'));
+        if remove_task
             motion_noise = regress_task(motion_noise,outTC);
         end
     end
@@ -99,7 +109,7 @@ for rr = runNum
     else
         physio_noise = load(fullfile(session_dir,d{rr},'pulse_params.txt'));
     end
-    noise = [anat_noise,motion_noise,physio_noise];
+    noise = [anat_noise,motion_noise,physio_noise,task_noise];
     % remove any means and linear trends
     noise = detrend(noise);
     %% Calculate global signal
@@ -127,10 +137,18 @@ for rr = runNum
     newtc = reshape(newtc,size(fmri.vol));
     Gnewtc = reshape(Gnewtc,size(fmri.vol));
     % load template file, for use in saving outputs
-    dsavename = ['d' func '.nii.gz'];
+    if task
+        dsavename = ['dt' func '.nii.gz'];
+    else
+        dsavename = ['d' func '.nii.gz'];
+    end
     fmri.vol = newtc;
     save_nifti(fmri,fullfile(session_dir,d{rr},dsavename));
-    gdsavename = ['gd' func '.nii.gz'];
+    if task
+        gdsavename = ['gdt' func '.nii.gz'];
+    else
+        gdsavename = ['gd' func '.nii.gz'];
+    end
     fmri.vol = Gnewtc;
     save_nifti(fmri,fullfile(session_dir,d{rr},gdsavename));
     % Save varience explained
