@@ -1,4 +1,4 @@
-function remove_noise(session_dir,runNum,func,remove_task,anat,motion,physio,task)
+function remove_noise(session_dir,runNum,func,remove_task,anat,motion,physio,task,task_inDir,keyword)
 % Removes physiological and other non-neuronal noise.
 %
 %   Usage:
@@ -24,6 +24,12 @@ if ~exist('physio','var')
 end
 if ~exist('task','var')
     task = 0; % if '0', won't remove task signals (NOTE: remove_task above just removes task from motion regressors)
+end
+if ~exist('task_inDir','var')
+    task_inDir = 'Stimuli';
+end
+if ~exist('task_valid','var')
+    keyword = '_valid';
 end
 %% In case no noise removal to be done, just return
 if ~remove_task && ~anat && ~motion && ~physio && ~task
@@ -66,7 +72,9 @@ for rr = runNum
     end
     %% Load up other nuisance regressors
     if task || remove_task
-                    % Get the task files
+            % Get the task files
+            %{
+            % I am using a different directory structure than this
             %   Some files have no leading zeros, so we have to clean up a bit.
             allDirs = listdir(fullfile(session_dir,'Stimuli'),'dirs');
             dirNums = zeros(1,length(allDirs));
@@ -78,7 +86,8 @@ for rr = runNum
                 end
             end
             [~,dirNums] = sort(dirNums);
-            inDir = fullfile(session_dir,'Stimuli',allDirs{dirNums(runNum)});
+            %}
+            inDir = fullfile(session_dir,d{rr},task_inDir);
             % Remove task
             TR = fmri.pixdim(5)/1000;
             if TR < 0.1
@@ -87,7 +96,7 @@ for rr = runNum
             lengthTC = size(tc,1);
             % Convert task conditions into timecoures (convolve with HRF) that
             % are at the resolution of the TR.
-            keyword = '_valid'; % only use 'valid' trials
+            %keyword = '_valid'; % only use 'valid' trials
             [outTC] = convert_task2tc(inDir,TR,lengthTC,keyword);
             % regress out task from motion
     end
