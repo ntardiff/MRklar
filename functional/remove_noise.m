@@ -28,7 +28,7 @@ end
 if ~exist('task_inDir','var')
     task_inDir = 'Stimuli';
 end
-if ~exist('task_valid','var')
+if ~exist('keyword','var')
     keyword = '_valid';
 end
 %% In case no noise removal to be done, just return
